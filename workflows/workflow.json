@@ -1,0 +1,515 @@
+{
+  "name": "AI-Powered GitLab Code Review Assistant for Senior Developers",
+  "nodes": [
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "owner": "ForteAi",
+        "repository": "DevFest-Astana-AI-Hackathon",
+        "events": [
+          "merge_requests"
+        ]
+      },
+      "id": "75c25084-a6e7-4b6a-a9c3-88f7227ed29c",
+      "name": "Merge Request Event",
+      "type": "n8n-nodes-base.gitlabTrigger",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        576
+      ],
+      "webhookId": "8ff2381a-a635-4259-9a0d-150ae31cdb4e",
+      "credentials": {
+        "gitlabOAuth2Api": {
+          "name": "GitLab account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a9fa7660-49c1-4387-9ca0-f2d5813684b2",
+              "name": "codingStandards",
+              "value": "Использовать strict mode в TypeScript; Следовать принципам SOLID; Избегать дублирования кода (DRY); Соблюдать KISS и YAGNI; Использовать осмысленные имена переменных и функций; Покрывать критический функционал тестами; Не оставлять console.log в production-коде.",
+              "type": "string"
+            },
+            {
+              "id": "7e53852c-a6ff-48d8-bff4-5c2d7e31fa12",
+              "name": "reviewCriteria",
+              "value": "Проверяй: корректность логики, безопасность (SQL-инъекции, XSS и т.п.), производительность, читаемость кода, соблюдение codingStandards, наличие/обновление тестов, соблюдение архитектурных договорённостей команды. Если найдены проблемы — классифицируй их по серьёзности: Critical, Major, Minor, Style.",
+              "type": "string"
+            },
+            {
+              "id": "3142fda0-befe-449f-9a4c-055a8b9def42",
+              "name": "minTestCoverage",
+              "value": 80,
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "62099056-7299-4662-a18a-676358f5f8d4",
+      "name": "Workflow Configuration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        128,
+        -128
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.reviewContext }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a senior software engineer conducting a thorough code review for a Merge Request in GitLab.\n\nYour task is to:\n1. Analyze the code changes (diff) provided in the context\n2. Evaluate code quality, security, performance, and adherence to coding standards\n3. Check if the implementation matches the described functionality in the MR description\n4. Identify potential bugs, code smells, and areas for improvement\n5. Verify test coverage and documentation\n6. Provide specific, actionable feedback with line references where applicable\n7. Generate a comprehensive review summary\n\nYou MUST return your analysis in the exact JSON format specified by the output parser.\n\nBe constructive, specific, and focus on high-impact issues. Prioritize security vulnerabilities and critical bugs over style preferences."
+        }
+      },
+      "id": "c416f48e-54ec-4293-b67d-3b4276191bf7",
+      "name": "Code Review AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        352,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"summary\": {\n      \"type\": \"string\",\n      \"description\": \"Brief summary of the code review\"\n    },\n    \"recommendation\": {\n      \"type\": \"string\",\n      \"enum\": [\"merge\", \"needs_fixes\", \"reject\"],\n      \"description\": \"Overall recommendation\"\n    },\n    \"issues\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"severity\": {\n            \"type\": \"string\",\n            \"enum\": [\"critical\", \"major\", \"minor\", \"suggestion\"]\n          },\n          \"category\": {\n            \"type\": \"string\",\n            \"enum\": [\"security\", \"performance\", \"quality\", \"testing\", \"documentation\", \"architecture\"]\n          },\n          \"file\": {\n            \"type\": \"string\"\n          },\n          \"line\": {\n            \"type\": \"number\"\n          },\n          \"description\": {\n            \"type\": \"string\"\n          },\n          \"suggestion\": {\n            \"type\": \"string\"\n          }\n        },\n        \"required\": [\"severity\", \"category\", \"description\"]\n      }\n    },\n    \"positives\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      },\n      \"description\": \"Positive aspects of the code\"\n    },\n    \"labels\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\",\n        \"enum\": [\"ready-for-merge\", \"needs-review\", \"changes-requested\", \"security-review\", \"performance-review\"]\n      }\n    }\n  },\n  \"required\": [\"summary\", \"recommendation\", \"issues\", \"labels\"]\n}",
+        "autoFix": true
+      },
+      "id": "aad4bec5-011e-4f0d-80a4-3ee9e6f5d24d",
+      "name": "Review Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        448,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "file",
+        "operation": "get",
+        "owner": "forteai",
+        "repository": "DevFest-Astana-AI-Hackathon",
+        "additionalParameters": {}
+      },
+      "id": "477a3b1b-c67b-46ef-b292-5c19219e6d25",
+      "name": "GitLab API Tool",
+      "type": "n8n-nodes-base.gitlabTool",
+      "typeVersion": 1,
+      "position": [
+        336,
+        288
+      ],
+      "credentials": {
+        "gitlabOAuth2Api": {
+          "name": "GitLab account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://gitlab.com/api/v4/projects/{{$json[\"body\"][\"project\"][\"id\"]}}/merge_requests/{{$json[\"body\"][\"object_attributes\"][\"iid\"]}}\n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "PRIVATE-TOKEN",
+              "value": "={{$env.GITLAB_PRIVATE_TOKEN}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        304,
+        -128
+      ],
+      "id": "1b3eb30b-b13b-4e3e-a81f-44d1a141e306",
+      "name": "Merge Request Event1"
+    },
+    {
+      "parameters": {
+        "url": "=https://gitlab.com/api/v4/projects/{{$json[\"project_id\"]}}/merge_requests/{{$json[\"iid\"]}}/changes",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "PRIVATE-TOKEN",
+              "value": "={{$env.GITLAB_PRIVATE_TOKEN}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        464,
+        -128
+      ],
+      "id": "9b921da9-cba0-4d56-9cde-84619388ca34",
+      "name": "Get MR Diff"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Ответ ИИ лежит в $json.output (как в примере)\nconst ai = $(\"Code Review AI Agent\").first().json.output;\n// Берём данные MR из ноды GitLab Trigger\nconst gitlabEvent = $(\"Merge Request Event\").first().json;\nconst projectId = gitlabEvent.body.project.id;\nconst iid = gitlabEvent.body.object_attributes.iid;\n\n// Лейблы от ИИ\nconst labels = ai.labels || [];\nconst labelsString = labels.join(',');\n\n// Соберём текст общего комментария (summary + recommendation + positives)\nlet summaryComment = `AI code review summary:\\n\\n${ai.summary}\\n\\nRecommendation: ${ai.recommendation}`;\nif (ai.positives && ai.positives.length) {\n  summaryComment += `\\n\\nPositives:\\n` + ai.positives.map(p => `- ${p}`).join('\\n');\n}\n\nreturn [\n  {\n    json: {\n      projectId,\n      iid,\n      summary: ai.summary,\n      recommendation: ai.recommendation,\n      issues: ai.issues || [],\n      positives: ai.positives || [],\n      labels,\n      labelsString,\n      summaryComment,\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        576
+      ],
+      "id": "89d488f3-3cc7-470c-854b-6b7766a8ee08",
+      "name": "Parse AI output"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{`https://gitlab.com/api/v4/projects/${$json.projectId}/merge_requests/${$json.iid}/notes`\n}}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gitlabOAuth2Api",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "body",
+              "value": "={{ $json.summaryComment }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1168,
+        368
+      ],
+      "id": "250fee94-0023-4a51-b103-094610e3e353",
+      "name": "Post summary note",
+      "credentials": {
+        "gitlabOAuth2Api": {
+          "name": "GitLab account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const { projectId, iid, issues } = $(\"Parse AI output\").first().json;\n\nif (!issues || !issues.length) {\n  // Нет замечаний — ничего не создаём\n  return [];\n}\n\n// Чтобы MR не утонул в комментариях, ограничим кол-во\nconst maxComments = 10;\n\nreturn issues.slice(0, maxComments).map(issue => {\n  const parts = [];\n\n  const file = issue.file || 'unknown file';\n  const linePart = issue.line ? ` (line ${issue.line})` : '';\n  parts.push(`File: ${file}${linePart}`);\n\n  if (issue.severity || issue.category) {\n    const sev = issue.severity || 'n/a';\n    const cat = issue.category || 'n/a';\n    parts.push(`Severity: ${sev}, Category: ${cat}`);\n  }\n\n  if (issue.description) {\n    parts.push('');\n    parts.push(`Description: ${issue.description}`);\n  }\n\n  if (issue.suggestion) {\n    parts.push('');\n    parts.push(`Suggestion: ${issue.suggestion}`);\n  }\n\n  const commentBody = parts.join('\\n');\n\n  return {\n    json: {\n      projectId,\n      iid,\n      commentBody,\n    },\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        784
+      ],
+      "id": "b21d998e-5732-490e-8883-8e55f94466cb",
+      "name": "Split issues to comments"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{`https://gitlab.com/api/v4/projects/${$json.projectId}/merge_requests/${$json.iid}/notes`\n}}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gitlabOAuth2Api",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "body",
+              "value": "={{ $json.commentBody }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1312,
+        784
+      ],
+      "id": "ebef778f-2ae1-489c-afd4-2da902c386ff",
+      "name": "Post issue notes",
+      "credentials": {
+        "gitlabOAuth2Api": {
+          "name": "GitLab account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{`https://gitlab.com/api/v4/projects/${$json.projectId}/merge_requests/${$json.iid}`\n}}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gitlabOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"labels\": \"{{$json.labelsString}}\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1168,
+        576
+      ],
+      "id": "cf0babcb-196e-4837-bfd1-6b22b50dd560",
+      "name": "Update MR labels",
+      "credentials": {
+        "gitlabOAuth2Api": {
+          "name": "GitLab account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Берём первый входной item (из Get MR Diff)\nconst item = $input.first();\nconst mr = item.json;\n\n// Собираем diff'ы в один текст (на будущее, может пригодиться)\nconst diffs = mr.changes || [];\nconst diffsText = diffs\n  .map(c => `FILE: ${c.new_path}\\n\\n${c.diff}`)\n  .join('\\n\\n---\\n\\n');\n\n// Стандарты кодирования (можешь править под себя)\nconst codingStandards = `\nИспользовать strict mode в TypeScript;\nСледовать принципам SOLID;\nИзбегать дублирования кода (DRY);\nСоблюдать KISS и YAGNI;\nИспользовать осмысленные имена переменных и функций;\nПокрывать критический функционал тестами;\nНе оставлять console.log в production-коде.\n`;\n\n// Критерии ревью\nconst reviewCriteria = `\nПроверяй: корректность логики, безопасность (SQL/XSS),\nпроизводительность, читаемость кода, соблюдение codingStandards,\nналичие/обновление тестов.\nКлассифицируй замечания: Critical, Major, Minor, Style.\n`;\n\n// Объект контекста, как в демо (важно: структура похожа)\nconst reviewContextObj = {\n  title: mr.title,\n  description: mr.description,\n  author: mr.author?.username,\n  source_branch: mr.source_branch,\n  target_branch: mr.target_branch,\n  changes: mr.changes,            // сырые changes из GitLab\n  codingStandards,\n  reviewCriteria,\n  minTestCoverage: 80\n};\n\n// Строка JSON, которую будет читать Code Review AI Agent\nconst reviewContext = JSON.stringify(reviewContextObj, null, 2);\n\n// Возвращаем один item с полями, которые могут пригодиться дальше\nreturn [\n  {\n    json: {\n      project_id: mr.project_id,\n      iid: mr.iid,\n      title: mr.title,\n      description: mr.description,\n      source_branch: mr.source_branch,\n      target_branch: mr.target_branch,\n      codingStandards,\n      reviewCriteria,\n      minTestCoverage: 80,\n      diffsText,\n      // главное поле для Prompt в Code Review AI Agent:\n      reviewContext\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        -128
+      ],
+      "id": "4e035873-bd33-4ae9-9e79-e2df1c33ac2b",
+      "name": "parser"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{$env.GOOGLE_GEMINI_API_KEY}}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        208,
+        320
+      ],
+      "id": "e28f259c-3256-4b23-9ecf-dc751ac59d7c",
+      "name": "Simple Memory",
+      "notes": "NOTE: sessionKey is using Google API key for demo purposes. Consider using a proper session identifier."
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        80,
+        272
+      ],
+      "id": "83644be6-2ad5-4a97-911c-e74a53dc47ee",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        416,
+        448
+      ],
+      "id": "e61b6815-03c5-4f44-b935-426ddfcbf353",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Merge Request Event": {
+      "main": [
+        [
+          {
+            "node": "Workflow Configuration",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Parse AI output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Workflow Configuration": {
+      "main": [
+        [
+          {
+            "node": "Merge Request Event1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Review Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Code Review AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitLab API Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Code Review AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Review AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse AI output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Request Event1": {
+      "main": [
+        [
+          {
+            "node": "Get MR Diff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get MR Diff": {
+      "main": [
+        [
+          {
+            "node": "parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI output": {
+      "main": [
+        [
+          {
+            "node": "Post summary note",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Split issues to comments",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update MR labels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post summary note": {
+      "main": [
+        []
+      ]
+    },
+    "Split issues to comments": {
+      "main": [
+        [
+          {
+            "node": "Post issue notes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "parser": {
+      "main": [
+        [
+          {
+            "node": "Code Review AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Code Review AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Code Review AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Review Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}
+
