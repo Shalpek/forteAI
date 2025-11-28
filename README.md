@@ -1,6 +1,6 @@
 # AI-Powered GitLab Code Review Assistant
 
-Автоматический AI-ассистент для проведения код-ревью Merge Request в GitLab на основе Google Gemini AI.
+Автоматический AI-ассистент для проведения код-ревью Merge Request в GitLab на основе AI-моделей (LLM). Поддерживает различные LLM: Google Gemini, OpenAI GPT, Anthropic Claude, Azure OpenAI, Ollama и другие.
 
 > **Проблемы с запуском?** Если команда `docker-compose` не найдена, см. [QUICK_START.md](QUICK_START.md) для быстрого решения.
 
@@ -29,7 +29,7 @@ Workflow состоит из следующих ключевых компоне�
    ↓
 4. Парсинг и формирование контекста для AI
    ↓
-5. AI Code Review Agent (Google Gemini)
+5. AI Code Review Agent (LLM модель - по умолчанию Google Gemini)
    ├── Simple Memory (сессия памяти)
    ├── Review Output Parser (структурированный вывод)
    └── GitLab API Tool (дополнительный доступ к GitLab)
@@ -70,7 +70,8 @@ Workflow состоит из следующих ключевых компоне�
 
 6. **Code Review AI Agent** (`@n8n/n8n-nodes-langchain.agent`)
 
-   - Основной AI-агент на базе Google Gemini
+   - Основной AI-агент на базе LLM модели (по умолчанию Google Gemini)
+   - Поддерживает различные LLM: OpenAI GPT, Anthropic Claude, Google Gemini, Azure OpenAI, Ollama и другие
    - Анализирует код и генерирует структурированный отзыв
 
 7. **Review Output Parser** (`outputParserStructured`)
@@ -138,7 +139,12 @@ docker compose version
   - `api`
   - `read_repository`
   - `write_repository`
-- Google Gemini API ключ ([получить здесь](https://aistudio.google.com/app/apikey))
+- **API ключ для LLM модели** (см. [Настройка LLM модели](#-настройка-llm-модели)):
+  - Google Gemini ([получить здесь](https://aistudio.google.com/app/apikey))
+  - OpenAI GPT ([получить здесь](https://platform.openai.com/api-keys))
+  - Anthropic Claude ([получить здесь](https://console.anthropic.com/))
+  - Azure OpenAI (через Azure Portal)
+  - Или другая поддерживаемая модель
 
 ### Установка и запуск
 
@@ -159,7 +165,11 @@ cp .env.example .env
 
 ```env
 GITLAB_PRIVATE_TOKEN=glpat-your-token-here
-GOOGLE_GEMINI_API_KEY=your-api-key-here
+# Выберите один из вариантов в зависимости от используемой LLM модели:
+GOOGLE_GEMINI_API_KEY=your-api-key-here  # Для Google Gemini (по умолчанию)
+# OPENAI_API_KEY=your-api-key-here      # Для OpenAI GPT
+# ANTHROPIC_API_KEY=your-api-key-here   # Для Anthropic Claude
+# AZURE_OPENAI_API_KEY=your-api-key-here # Для Azure OpenAI
 ```
 
 3. **Запустите n8n через Docker Compose:**
@@ -193,11 +203,15 @@ docker-compose up -d
    - Введите ваш GitLab Personal Access Token
    - Повторите для узлов `GitLab API Tool`, `Post summary note`, `Post issue notes`, `Update MR labels`
 
-   **Google Gemini API Credentials:**
+   **LLM API Credentials (выберите модель):**
 
+   **Для Google Gemini (по умолчанию):**
    - Откройте узлы `Google Gemini Chat Model` и `Google Gemini Chat Model1`
    - Создайте новую Google Gemini (PaLM) API credential
    - Введите ваш `GOOGLE_GEMINI_API_KEY` из `.env`
+
+   **Для других LLM моделей:**
+   - См. раздел [Настройка LLM модели](#-настройка-llm-модели) ниже
 
 7. **Настройте репозиторий GitLab:**
 
@@ -230,13 +244,54 @@ docker-compose up -d
 3. Скопируйте токен (он показывается только один раз!)
 4. Добавьте токен в `.env` файл
 
-### 2. Получение Google Gemini API Key
+### 2. Получение API ключа для LLM модели
+
+Workflow поддерживает различные LLM модели. Выберите одну из них:
+
+#### Google Gemini (по умолчанию)
 
 1. Перейдите на [Google AI Studio](https://aistudio.google.com/app/apikey)
 2. Войдите в аккаунт Google
 3. Нажмите `Create API Key`
 4. Скопируйте ключ
-5. Добавьте ключ в `.env` файл
+5. Добавьте ключ в `.env` файл как `GOOGLE_GEMINI_API_KEY`
+
+#### OpenAI GPT
+
+1. Перейдите на [OpenAI Platform](https://platform.openai.com/api-keys)
+2. Войдите в аккаунт OpenAI
+3. Нажмите `Create new secret key`
+4. Скопируйте ключ
+5. Добавьте ключ в `.env` файл как `OPENAI_API_KEY`
+6. См. раздел [Настройка LLM модели](#-настройка-llm-модели) для изменения workflow
+
+#### Anthropic Claude
+
+1. Перейдите на [Anthropic Console](https://console.anthropic.com/)
+2. Войдите в аккаунт
+3. Перейдите в раздел API Keys
+4. Создайте новый ключ
+5. Скопируйте ключ
+6. Добавьте ключ в `.env` файл как `ANTHROPIC_API_KEY`
+7. См. раздел [Настройка LLM модели](#-настройка-llm-модели) для изменения workflow
+
+#### Azure OpenAI
+
+1. Создайте ресурс Azure OpenAI в [Azure Portal](https://portal.azure.com)
+2. Получите API ключ и endpoint из настроек ресурса
+3. Добавьте в `.env` файл:
+   - `AZURE_OPENAI_API_KEY=your-key`
+   - `AZURE_OPENAI_ENDPOINT=your-endpoint`
+   - `AZURE_OPENAI_DEPLOYMENT_NAME=your-deployment`
+4. См. раздел [Настройка LLM модели](#-настройка-llm-модели) для изменения workflow
+
+#### Ollama (локальные модели)
+
+1. Установите [Ollama](https://ollama.ai/)
+2. Запустите Ollama локально
+3. Скачайте модель: `ollama pull llama2` или `ollama pull mistral`
+4. В `.env` укажите: `OLLAMA_BASE_URL=http://localhost:11434`
+5. См. раздел [Настройка LLM модели](#-настройка-llm-модели) для изменения workflow
 
 ### 3. Импорт workflow в n8n
 
@@ -260,7 +315,9 @@ docker-compose up -d
 6. Сохраните credential
 7. Повторите для всех узлов, использующих GitLab API
 
-#### Google Gemini API Credential:
+#### LLM API Credential (выберите модель):
+
+**Для Google Gemini (по умолчанию):**
 
 1. Откройте узел `Google Gemini Chat Model`
 2. В поле `Credential for Google PaLM API` нажмите `Create New Credential`
@@ -268,6 +325,10 @@ docker-compose up -d
 4. В поле `API Key` вставьте ваш `GOOGLE_GEMINI_API_KEY` из `.env`
 5. Сохраните credential
 6. Убедитесь, что тот же credential используется в узле `Google Gemini Chat Model1`
+
+**Для других LLM моделей:**
+
+См. раздел [Настройка LLM модели](#-настройка-llm-модели) ниже для инструкций по замене модели.
 
 ### 5. Настройка репозитория
 
@@ -414,13 +475,98 @@ git push origin feature/new-feature
 | Переменная              | Описание                     | Где получить                                                                 |
 | ----------------------- | ---------------------------- | ---------------------------------------------------------------------------- |
 | `GITLAB_PRIVATE_TOKEN`  | GitLab Personal Access Token | [GitLab Settings](https://gitlab.com/-/user_settings/personal_access_tokens) |
-| `GOOGLE_GEMINI_API_KEY` | Google Gemini API ключ       | [Google AI Studio](https://aistudio.google.com/app/apikey)                   |
+| `GOOGLE_GEMINI_API_KEY` | Google Gemini API ключ (по умолчанию) | [Google AI Studio](https://aistudio.google.com/app/apikey)                   |
+| `OPENAI_API_KEY`        | OpenAI API ключ (альтернатива) | [OpenAI Platform](https://platform.openai.com/api-keys)                      |
+| `ANTHROPIC_API_KEY`     | Anthropic Claude API ключ (альтернатива) | [Anthropic Console](https://console.anthropic.com/)                          |
+| `AZURE_OPENAI_API_KEY`  | Azure OpenAI API ключ (альтернатива) | [Azure Portal](https://portal.azure.com)                                     |
+| `OLLAMA_BASE_URL`       | Ollama endpoint (для локальных моделей) | [Ollama](https://ollama.ai/) (по умолчанию: http://localhost:11434)         |
 
 ### Опциональные переменные:
 
 - `GITLAB_URL` - URL вашего GitLab инстанса (по умолчанию `https://gitlab.com`)
 - `GITLAB_OWNER` - владелец репозитория (можно настроить в workflow)
 - `GITLAB_REPOSITORY` - название репозитория (можно настроить в workflow)
+
+## 🤖 Настройка LLM модели
+
+Workflow по умолчанию использует Google Gemini, но вы можете легко заменить его на любую другую поддерживаемую LLM модель в n8n.
+
+### Поддерживаемые модели
+
+n8n поддерживает следующие LLM модели через LangChain узлы:
+
+- **OpenAI**: GPT-3.5, GPT-4, GPT-4 Turbo
+- **Anthropic**: Claude 3 (Opus, Sonnet, Haiku)
+- **Google**: Gemini Pro, PaLM 2
+- **Azure OpenAI**: все модели OpenAI через Azure
+- **Ollama**: локальные модели (Llama 2, Mistral, CodeLlama и др.)
+- **Hugging Face**: различные open-source модели
+- **Cohere**: Command, Command Light
+- **Replicate**: различные модели через Replicate API
+
+### Замена модели в workflow
+
+1. **Откройте workflow в n8n**
+
+2. **Найдите узлы Language Model:**
+   - `Google Gemini Chat Model` (основная модель для анализа)
+   - `Google Gemini Chat Model1` (для output parser)
+
+3. **Замените узлы на нужную модель:**
+
+   **Для OpenAI GPT:**
+   - Удалите узлы `Google Gemini Chat Model` и `Google Gemini Chat Model1`
+   - Добавьте узлы `OpenAI` → `ChatOpenAI`
+   - Подключите их к `Code Review AI Agent` и `Review Output Parser`
+   - Настройте credential с вашим `OPENAI_API_KEY`
+
+   **Для Anthropic Claude:**
+   - Удалите узлы `Google Gemini Chat Model` и `Google Gemini Chat Model1`
+   - Добавьте узлы `Anthropic` → `ChatAnthropic`
+   - Подключите их к `Code Review AI Agent` и `Review Output Parser`
+   - Настройте credential с вашим `ANTHROPIC_API_KEY`
+
+   **Для Azure OpenAI:**
+   - Удалите узлы `Google Gemini Chat Model` и `Google Gemini Chat Model1`
+   - Добавьте узлы `Azure OpenAI` → `ChatAzureOpenAI`
+   - Подключите их к `Code Review AI Agent` и `Review Output Parser`
+   - Настройте credential с вашими Azure параметрами
+
+   **Для Ollama (локальные модели):**
+   - Удалите узлы `Google Gemini Chat Model` и `Google Gemini Chat Model1`
+   - Добавьте узлы `Ollama` → `ChatOllama`
+   - Подключите их к `Code Review AI Agent` и `Review Output Parser`
+   - В настройках укажите:
+     - Base URL: `http://localhost:11434` (или ваш Ollama endpoint)
+     - Model: `llama2`, `mistral`, `codellama` или другая модель
+
+4. **Обновите credentials:**
+   - Создайте соответствующий credential для выбранной модели
+   - Убедитесь, что API ключ добавлен в `.env` файл
+
+5. **Протестируйте workflow:**
+   - Создайте тестовый MR
+   - Проверьте, что AI-анализ работает корректно
+
+### Рекомендации по выбору модели
+
+- **Для лучшего качества анализа кода:** GPT-4, Claude 3 Opus, Gemini Pro
+- **Для баланса качества и стоимости:** GPT-3.5 Turbo, Claude 3 Sonnet, Gemini Pro
+- **Для приватности и локального использования:** Ollama с Llama 2 или CodeLlama
+- **Для больших объемов:** GPT-3.5 Turbo (быстрее и дешевле)
+
+### Пример: Замена на OpenAI GPT-4
+
+1. В n8n workflow удалите узлы `Google Gemini Chat Model` и `Google Gemini Chat Model1`
+2. Добавьте два узла `OpenAI` → `ChatOpenAI`
+3. Настройте узлы:
+   - Model: `gpt-4` или `gpt-4-turbo-preview`
+   - Temperature: `0.3` (для более детерминированных ответов)
+4. Подключите узлы:
+   - Первый узел → `Code Review AI Agent` (ai_languageModel)
+   - Второй узел → `Review Output Parser` (ai_languageModel)
+5. Создайте OpenAI credential с вашим `OPENAI_API_KEY`
+6. Сохраните и активируйте workflow
 
 ## 🛠️ Настройка стандартов кодирования
 
